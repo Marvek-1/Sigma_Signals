@@ -1,234 +1,193 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { fetchDiseaseAlerts } from './services/geminiService';
-import { AfroAlert, DiseaseInfo } from './types';
-import { AFRO_DISEASES, AFRO_ISO3_LIST } from './constants';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { fetchIntelligence } from './services/geminiService';
+import { AfroEvent, GradeLevel } from './types';
+import SidebarLeft from './components/SidebarLeft';
+import SidebarRight from './components/SidebarRight';
 import AlertCard from './components/AlertCard';
 import MetricsGrid from './components/MetricsGrid';
 import DiseaseCharts from './components/DiseaseCharts';
+import { ToastContainer } from './components/ToastSystem';
 import { 
-  Search, 
-  RefreshCw, 
-  Filter, 
-  Settings, 
-  Bell, 
-  ShieldCheck, 
+  ShieldAlert, 
+  Activity, 
+  RefreshCw,
+  Loader2,
+  Wifi,
   Database,
-  ArrowUpRight,
-  Loader2
+  TriangleAlert
 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [alerts, setAlerts] = useState<AfroAlert[]>([]);
+  const [events, setEvents] = useState<AfroEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDisease, setSelectedDisease] = useState<string>('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ diseases: [], countries: [], grades: [] });
 
   const loadData = useCallback(async () => {
     setIsRefreshing(true);
-    const data = await fetchDiseaseAlerts(selectedDisease || undefined, selectedCountry || undefined);
-    setAlerts(data);
+    setFetchError(null);
+    const result = await fetchIntelligence(filters);
+    
+    if (result.error) {
+      setFetchError(result.error);
+    } else {
+      setEvents(result.events);
+    }
+    
     setLoading(false);
     setIsRefreshing(false);
-  }, [selectedDisease, selectedCountry]);
+  }, [filters]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Frequency reduced to 10 minutes (600,000ms) to prevent RESOURCE_EXHAUSTED
+    const interval = setInterval(() => {
+      console.log("10-minute intelligence pulse cycle triggered...");
+      loadData();
+    }, 600000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach(e => {
+      counts[e.grade] = (counts[e.grade] || 0) + 1;
+    });
+    return counts;
+  }, [events]);
+
+  const alerts = useMemo(() => events.filter(e => e.type === 'ALERT'), [events]);
+  const signals = useMemo(() => events.filter(e => e.type === 'SIGNAL'), [events]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <ShieldCheck className="text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">
-                AFRO<span className="text-blue-500">SENTINEL</span>
-              </h1>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
-                WHO regional signal intelligence
-              </p>
-            </div>
+    <div className="h-screen flex flex-col bg-[#0b1120] text-slate-100 overflow-hidden font-['Inter']">
+      {/* Tactical Header */}
+      <header className="h-16 border-b border-slate-800 bg-[#0b1120]/95 backdrop-blur-md flex items-center justify-between px-8 z-50 shadow-xl shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="bg-red-600 p-2 rounded-lg shadow-lg shadow-red-900/20 relative">
+            <ShieldAlert className="text-white" size={24} />
+            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full animate-ping opacity-30"></div>
           </div>
+          <div>
+            <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">
+              AFRO<span className="text-blue-500">SENTINEL</span>
+            </h1>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1">Live Intelligence Hub</p>
+          </div>
+        </div>
 
-          <div className="hidden md:flex items-center gap-6">
-            <nav className="flex items-center gap-4 text-sm font-semibold text-slate-400">
-              <a href="#" className="text-blue-400 border-b-2 border-blue-400 pb-1">Surveillance</a>
-              <a href="#" className="hover:text-white transition-colors">Risk Maps</a>
-              <a href="#" className="hover:text-white transition-colors">Reports</a>
-              <a href="#" className="hover:text-white transition-colors">Labs</a>
-            </nav>
-            <div className="h-6 w-px bg-slate-800"></div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 text-slate-400 hover:bg-slate-800 rounded-full transition-colors relative">
-                <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-slate-900"></span>
-              </button>
-              <button className="p-2 text-slate-400 hover:bg-slate-800 rounded-full transition-colors">
-                <Settings size={20} />
-              </button>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-emerald-400 border border-white/20"></div>
-            </div>
-          </div>
+        <div className="flex items-center gap-6">
+           <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-800/50 border border-slate-700 rounded-lg">
+             <Wifi size={12} className={fetchError ? "text-red-500" : "text-emerald-500 animate-pulse"} />
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               {fetchError ? "Connection Limited" : "Signal Locked"}
+             </span>
+           </div>
+           <button 
+             onClick={loadData}
+             disabled={isRefreshing}
+             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-black px-5 py-2 rounded-lg text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 group"
+           >
+             {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />}
+             SYNC INTELLIGENCE
+           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Filter Bar */}
-        <section className="bg-slate-800/30 border border-slate-700 p-4 rounded-2xl mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-              <div className="relative flex-1 min-w-[200px]">
-                <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <select 
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                  value={selectedDisease}
-                  onChange={(e) => setSelectedDisease(e.target.value)}
-                >
-                  <option value="">All Priority Diseases</option>
-                  {AFRO_DISEASES.map(d => (
-                    <option key={d.code} value={d.code}>{d.name} ({d.code})</option>
-                  ))}
-                </select>
+      {/* Main Grid Layout */}
+      <div className="flex flex-1 overflow-hidden relative">
+        <SidebarLeft counts={gradeCounts} filters={filters} onFilterChange={setFilters} />
+
+        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/5 to-transparent pointer-events-none"></div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-4">
+              <div className="relative">
+                <div className="w-20 h-20 border-2 border-slate-800 border-t-blue-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <Activity size={32} className="text-blue-500 animate-pulse" />
+                </div>
+              </div>
+              <p className="text-slate-400 text-sm font-black uppercase tracking-[0.4em] animate-pulse">Scanning Community Digital Signals...</p>
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto animate-fade-in relative z-10">
+              {fetchError === "QUOTA_EXHAUSTED" && (
+                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-4 text-amber-200 shadow-lg">
+                  <TriangleAlert size={24} className="flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs font-black uppercase tracking-widest">AI Quota Exceeded (429)</p>
+                    <p className="text-[11px] opacity-70">Automated sync frequency adjusted. Displaying last known intelligence. System will retry in 10 minutes.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Aggregated view */}
+              <MetricsGrid alerts={alerts} />
+              
+              <div className="mb-12">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1 h-8 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">Epidemic SitRep</h2>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Validated High-Precision Graded Events</p>
+                  </div>
+                </div>
+
+                {alerts.length === 0 ? (
+                  <div className="bg-slate-800/10 border-2 border-dashed border-slate-800 rounded-3xl p-24 text-center">
+                    <ShieldAlert size={64} className="mx-auto text-slate-800 mb-6 opacity-40" />
+                    <p className="text-slate-600 text-lg font-black uppercase italic tracking-widest">
+                      {fetchError ? "Sync Suspended: Quota Exhausted" : "No Graded Alerts Detected"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {alerts.map(alert => (
+                      <AlertCard key={alert.id} alert={alert} />
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="relative flex-1 min-w-[200px]">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <select 
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                  value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
-                >
-                  <option value="">All AFRO Countries</option>
-                  {AFRO_ISO3_LIST.map(iso => (
-                    <option key={iso} value={iso}>{iso}</option>
-                  ))}
-                </select>
+              <div className="mt-12">
+                 <DiseaseCharts alerts={events} />
               </div>
             </div>
+          )}
+        </main>
 
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <button 
-                onClick={loadData}
-                disabled={isRefreshing}
-                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-all shadow-lg shadow-blue-900/20 active:scale-95 whitespace-nowrap"
-              >
-                {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                SYNC PIPELINE
-              </button>
-              <div className="bg-slate-900 border border-slate-700 p-1 rounded-lg flex gap-1">
-                <button className="p-1.5 bg-slate-800 rounded text-blue-400">
-                  <Database size={18} />
-                </button>
-                <button className="p-1.5 text-slate-500 hover:text-slate-300">
-                  <ArrowUpRight size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <SidebarRight signals={signals} />
+      </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-96 space-y-4">
-            <Loader2 className="animate-spin text-blue-500" size={48} />
-            <div className="text-center">
-              <h3 className="text-xl font-bold">Initializing Signal Extraction...</h3>
-              <p className="text-slate-500 max-w-xs mx-auto">Gemini is querying ProMED, GDELT, and official WHO channels for live AFRO signals.</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <MetricsGrid alerts={alerts} />
-            
-            <DiseaseCharts alerts={alerts} />
+      <ToastContainer events={events} />
 
-            <div className="mb-6 flex justify-between items-end">
-              <div>
-                <h2 className="text-2xl font-black text-white tracking-tight uppercase">Live Signals Feed</h2>
-                <p className="text-slate-500 text-sm font-medium">Real-time extracted events from multi-source digital surveillance</p>
-              </div>
-              <div className="text-[10px] text-slate-600 font-black uppercase tracking-widest border border-slate-800 px-3 py-1 rounded">
-                Updated {new Date().toLocaleTimeString()}
-              </div>
+      <footer className="h-8 bg-slate-950 border-t border-slate-800 flex items-center justify-between px-8 text-[8px] font-black text-slate-600 uppercase tracking-[0.3em] shrink-0">
+         <div className="flex gap-8">
+            <div className="flex items-center gap-2 text-emerald-500/70">
+               <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div> SYSTEM CORE: NOMINAL
             </div>
-
-            {alerts.length === 0 ? (
-              <div className="bg-slate-800/20 border-2 border-dashed border-slate-800 rounded-3xl p-12 text-center">
-                <ShieldCheck size={48} className="mx-auto text-slate-700 mb-4" />
-                <h3 className="text-xl font-bold text-slate-400">No signals detected for selected parameters</h3>
-                <p className="text-slate-600">Try broadening your disease or country selection.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {alerts.map(alert => (
-                  <AlertCard key={alert.alert_id} alert={alert} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-12">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            <div className="col-span-2">
-              <div className="flex items-center gap-3 mb-6">
-                <ShieldCheck className="text-blue-500" size={32} />
-                <h2 className="text-2xl font-black text-white italic tracking-tighter">AFRO SENTINEL</h2>
-              </div>
-              <p className="text-slate-500 text-sm max-w-md leading-relaxed">
-                A high-fidelity disease surveillance platform leveraging advanced NLP and generative AI 
-                to aggregate, extract, and verify public health signals across the 50 WHO AFRO member states. 
-                Built for epidemiological preparedness and rapid response coordination.
-              </p>
+            <div className="flex items-center gap-2">
+               <Database size={10} className="text-blue-500" /> REFRESH CYCLE: 600S
             </div>
-            <div>
-              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Master Data Sources</h4>
-              <ul className="space-y-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                <li className="hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> ProMED-mail
-                </li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> WHO Global Health Obs.
-                </li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> GDELT Knowledge Graph
-                </li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Africa CDC Digital Surveillance
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Protocol Support</h4>
-              <ul className="space-y-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                <li className="hover:text-emerald-400 transition-colors cursor-pointer">IHR (2005) Compliance</li>
-                <li className="hover:text-emerald-400 transition-colors cursor-pointer">IDSR Guidelines</li>
-                <li className="hover:text-emerald-400 transition-colors cursor-pointer">STAR WASH Risk</li>
-                <li className="hover:text-emerald-400 transition-colors cursor-pointer">NASA Hazard Integration</li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-slate-800 flex flex-col md:row justify-between items-center gap-4 text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-            <div>© 2024 WHO AFRO Digital Health Preparedness Unit. Internal Access Only.</div>
-            <div className="flex gap-6">
-              <a href="#" className="hover:text-white">Security Policy</a>
-              <a href="#" className="hover:text-white">API Access</a>
-              <a href="#" className="hover:text-white">Governance</a>
-            </div>
-          </div>
-        </div>
+         </div>
+         <div className="flex gap-8">
+            <span className="text-slate-500 border-r border-slate-800 pr-8 uppercase">IHR (2005) CLASSIFIED SENTINEL</span>
+            <span className="text-blue-500 font-black tracking-tighter">WHO-AFRO-HUB-v4.0.0-PRO</span>
+         </div>
       </footer>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+      `}</style>
     </div>
   );
 };

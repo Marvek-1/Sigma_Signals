@@ -31,7 +31,7 @@ const DiseaseCharts: React.FC<Props> = ({ alerts }) => {
       <div className="bg-slate-800/40 border border-slate-700 p-6 rounded-xl">
         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Signals by Disease Type</h3>
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <BarChart data={chartData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
               <XAxis type="number" stroke="#94a3b8" fontSize={12} />
@@ -53,7 +53,7 @@ const DiseaseCharts: React.FC<Props> = ({ alerts }) => {
       <div className="bg-slate-800/40 border border-slate-700 p-6 rounded-xl">
         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Hotspot Countries (Alert Vol.)</h3>
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <PieChart>
               <Pie
                 data={countryData}
