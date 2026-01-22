@@ -5,17 +5,21 @@ export enum AlertLevel {
   HIGH = 'HIGH'
 }
 
-export enum GradeLevel {
-  GRADE_3 = 'Grade 3', // Regional/Global Emergency
-  GRADE_2 = 'Grade 2', // Major Scale
-  GRADE_1 = 'Grade 1', // Limited/Single Country
-  UNGRADED = 'Ungraded'
+export enum SeverityLevel {
+  LOW = 'LOW',
+  MODERATE = 'MODERATE',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
 }
 
 export enum WorkflowStatus {
-  SIGNAL = 'signal', // Raw unverified data
-  TRIAGED = 'triaged', // AI filtered
-  VALIDATED = 'validated', // Confirmed alert
+  NEW = 'new',
+  TRIAGE = 'triage',
+  UNDER_VERIFICATION = 'under_verification',
+  VALIDATED = 'validated',
+  PUBLISHED = 'published',
+  SUPPRESSED = 'suppressed',
+  CLOSED = 'closed'
 }
 
 export interface DiseaseInfo {
@@ -24,32 +28,34 @@ export interface DiseaseInfo {
   syndrome: string;
 }
 
-export interface AfroEvent {
-  id: string;
-  type: 'SIGNAL' | 'ALERT';
+export interface AfroAlert {
+  alert_id: string;
+  alert_type: 'AFRO_MEDIA_DISEASE' | 'AFRO_NASA_HAZARD' | 'AFRO_FUSION';
   country_iso3: string;
-  country_name: string;
   admin1?: string;
   disease?: DiseaseInfo;
   title: string;
   summary: string;
   alert_level: AlertLevel;
-  grade: GradeLevel;
   confidence: number;
+  severity: SeverityLevel;
+  priority: number;
   status: WorkflowStatus;
-  
-  community_pulse: {
-    informal_signal_volume: 'low' | 'medium' | 'high';
-    vernacular_terms: string[];
-    sentiment: 'panic' | 'concern' | 'neutral';
-  };
-  
   evidence: {
     signal_count: number;
-    source_types: string[];
+    unique_sources: number;
+    source_ids: string[];
     top_urls: string[];
   };
-  
-  field_readiness: string[];
+  recommended_afro_actions: string[];
   created_at: string;
+}
+
+export interface MediaSignal {
+  signal_id: string;
+  country_iso3: string;
+  source_name: string;
+  headline: string;
+  published_at: string;
+  matched_keywords: string[];
 }
