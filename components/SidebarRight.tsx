@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AfroEvent } from '../types';
-import { Radio, ArrowUpRight, MessageSquare, Globe, Tv, Facebook, Share2 } from 'lucide-react';
+import { Radio, ArrowUpRight, MessageSquare, Globe, Tv, Facebook, Share2, Clock } from 'lucide-react';
 
 interface Props {
   signals: AfroEvent[];
@@ -67,6 +67,11 @@ const SidebarRight: React.FC<Props> = ({ signals }) => {
               <h4 className="text-[11px] font-bold text-slate-200 leading-tight mb-2 line-clamp-2">
                 {signal.title}
               </h4>
+
+              <div className="flex items-center gap-2 mb-3 text-[8px] text-slate-500 font-black uppercase">
+                 <Clock size={10} />
+                 <span>{signal.created_at ? new Date(signal.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live'}</span>
+              </div>
 
               <div className="flex flex-wrap gap-1 mb-3">
                  {signal.community_pulse.vernacular_terms?.slice(0, 3).map((v, i) => (

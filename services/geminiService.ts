@@ -54,8 +54,11 @@ export const fetchIntelligence = async (filters: { diseases: string[], countries
     SCHEMA REQUIREMENTS:
     Return an array of 8-10 items. 
     - "type" must be 'ALERT' or 'SIGNAL'.
-    - "evidence.source_platform" MUST name the specific source.
-    - "grade" MUST be Grade 1, 2, 3 or Ungraded.
+    - "community_pulse.context_explanation": Detailed explanation of where the signal originated and why it is significant.
+    - "community_pulse.vernacular_mapping": List of terms found mapping to clinical symptoms (e.g., "yellow water" -> "Acute Watery Diarrhea").
+    - "community_pulse.signal_timeline": 3-5 hypothetical recent pulse points (ISO timestamp and relative volume 1-100) leading up to detection.
+    - "evidence.reliability_note" MUST include a credibility score or brief note.
+    - "created_at" MUST be a very recent ISO timestamp.
 
     JSON ONLY.
   `;
@@ -107,9 +110,30 @@ export const fetchIntelligence = async (filters: { diseases: string[], countries
                   type: Type.OBJECT,
                   properties: {
                     informal_signal_volume: { type: Type.STRING, enum: ['low', 'moderate', 'high'] },
+                    context_explanation: { type: Type.STRING },
                     vernacular_terms: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    vernacular_mapping: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          term: { type: Type.STRING },
+                          symptom_mapping: { type: Type.STRING }
+                        }
+                      }
+                    },
                     sentiment: { type: Type.STRING },
-                    anecdote_snippet: { type: Type.STRING }
+                    anecdote_snippet: { type: Type.STRING },
+                    signal_timeline: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          timestamp: { type: Type.STRING },
+                          volume: { type: Type.NUMBER }
+                        }
+                      }
+                    }
                   }
                 },
                 evidence: {
@@ -117,6 +141,7 @@ export const fetchIntelligence = async (filters: { diseases: string[], countries
                   properties: {
                     signal_count: { type: Type.NUMBER },
                     source_platform: { type: Type.STRING },
+                    reliability_note: { type: Type.STRING },
                     top_urls: { type: Type.ARRAY, items: { type: Type.STRING } }
                   }
                 },
@@ -129,8 +154,26 @@ export const fetchIntelligence = async (filters: { diseases: string[], countries
       });
     });
 
-    const data = JSON.parse(response.text || "[]");
-    return { events: data };
+    const rawData = JSON.parse(response.text || "[]");
+    
+    // Sanitize data
+    const sanitizedData = Array.isArray(rawData) ? rawData.map((item: any) => ({
+      ...item,
+      community_pulse: item.community_pulse || {
+        informal_signal_volume: 'low',
+        vernacular_terms: [],
+        vernacular_mapping: [],
+        sentiment: 'Neutral',
+        signal_timeline: []
+      },
+      evidence: item.evidence || {
+        signal_count: 1,
+        source_platform: 'Digital Intelligence',
+        top_urls: []
+      }
+    })) : [];
+
+    return { events: sanitizedData };
   } catch (error: any) {
     const isQuota = error?.message?.includes("429") || error?.message?.includes("quota") || error?.message?.includes("RESOURCE_EXHAUSTED");
     return { events: [], error: isQuota ? "QUOTA_EXHAUSTED" : error.message };

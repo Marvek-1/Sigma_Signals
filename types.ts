@@ -34,6 +34,16 @@ export interface DiseaseInfo {
   syndrome: string;
 }
 
+export interface VernacularMapping {
+  term: string;
+  symptom_mapping: string;
+}
+
+export interface SignalTimelinePoint {
+  timestamp: string;
+  volume: number;
+}
+
 export interface AfroEvent {
   id: string;
   type: 'ALERT' | 'SIGNAL';
@@ -55,13 +65,17 @@ export interface AfroEvent {
   };
   community_pulse: {
     informal_signal_volume: 'low' | 'moderate' | 'high';
+    context_explanation?: string;
     vernacular_terms: string[];
+    vernacular_mapping?: VernacularMapping[];
     sentiment: string;
     anecdote_snippet?: string;
+    signal_timeline?: SignalTimelinePoint[];
   };
   evidence: {
     signal_count: number;
-    source_platform: string; // e.g., TikTok, Facebook, Internet TV
+    source_platform: string; 
+    reliability_note?: string; 
     top_urls: string[];
   };
   field_readiness: string[];
