@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { AfroAlert } from '../types';
+// Fix: Changed AfroAlert to AfroEvent as defined in types.ts
+import { AfroEvent } from '../types';
 
 interface Props {
-  alerts: AfroAlert[];
+  alerts: AfroEvent[];
 }
 
 const DiseaseCharts: React.FC<Props> = ({ alerts }) => {
