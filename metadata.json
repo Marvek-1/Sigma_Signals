@@ -1,0 +1,7 @@
+{
+  "name": "AFRO Sentinel: Real-time Disease Alert System",
+  "description": "A high-fidelity disease surveillance and alert tracking platform for the WHO AFRO region, utilizing Gemini AI for signal extraction and cross-source verification.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
